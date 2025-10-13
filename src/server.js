@@ -1,5 +1,6 @@
 import net from 'net';
 import { handleRoute } from './router.js';
+import express from 'express';
 
 function parseHttpRequest(raw) {
   const request = raw.toString();
@@ -23,8 +24,7 @@ const server = net.createServer((socket) => {
     buffer = Buffer.concat([buffer, chunk]);
 
     const reqText = buffer.toString();
-
-    // We have full headers?
+    
     const headerEnd = reqText.indexOf('\r\n\r\n');
     if (headerEnd === -1) return; // wait for more data
 
@@ -49,7 +49,23 @@ const server = net.createServer((socket) => {
   });
 });
 
+const app = express();
+
+// Health check endpoint (GET only)
+app.get('/health', (req, res) => {
+  res.sendStatus(200);
+});
+
+// 405 handler for /health (for all other methods)
+app.all('/health', (req, res, next) => {
+  if (req.method !== 'GET') {
+    res.set('Allow', 'GET');
+    return res.sendStatus(405);
+  }
+  next();
+});
+
 const PORT = 3000;
 server.listen(PORT, () => {
-  console.log(`✅ HTTP-over-TCP server running on http://127.0.0.1:${PORT}`);
+  console.log(`HTTP-over-TCP server running on http://127.0.0.1:${PORT}`);
 });
