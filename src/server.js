@@ -21,12 +21,11 @@ const server = net.createServer((socket) => {
   let buffer = Buffer.alloc(0);
 
   socket.on('data', (chunk) => {
-    buffer = Buffer.concat([buffer, chunk]);
-
+  buffer = Buffer.concat([buffer, chunk]);
+  while (true) {
     const reqText = buffer.toString();
-    
     const headerEnd = reqText.indexOf('\r\n\r\n');
-    if (headerEnd === -1) return; // wait for more data
+    if (headerEnd === -1) break; // wait for more data
 
     const headerPart = reqText.slice(0, headerEnd);
     const headerLines = headerPart.split('\r\n');
@@ -40,14 +39,25 @@ const server = net.createServer((socket) => {
 
     const contentLength = parseInt(headers['content-length'] || '0', 10);
     const totalExpected = headerEnd + 4 + contentLength;
-    if (buffer.length < totalExpected) return; // still waiting for body
+    if (buffer.length < totalExpected) break; // wait for full body
 
     const body = buffer.slice(headerEnd + 4, totalExpected).toString();
     const reqUrl = new URL(path, 'http://placeholder');
 
     handleRoute(method, reqUrl, socket, headers, body);
-  });
+
+    // Remove processed request from buffer
+    buffer = buffer.slice(totalExpected);
+
+    if (buffer.length === 0) break;
+  }
 });
+socket.on('error', (err) => {
+  //console.log('Socket error:', err);
+});
+});
+
+
 
 const app = express();
 

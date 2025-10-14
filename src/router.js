@@ -15,6 +15,8 @@ const sessions = new Map();
 export function handleRoute(method, url, socket, headers = {}, body = '') {
   const path = url.pathname;
 
+  console.log(`method: ${method}, path: ${path}, body: ${body}`);
+
   if (method === 'OPTIONS') {
   const origin = headers['origin'] || '*';
   const reqMethod = headers['access-control-request-method'] || '';
@@ -197,6 +199,37 @@ export function handleRoute(method, url, socket, headers = {}, body = '') {
   // console.log(`path: ${path}`);
   // console.log(`method: ${method}`);
   // ---- Root or static ----
+
+  if (method === 'GET' && path === '/') {
+    const body = '<h1>Hello, world!</h1>';
+    const response =
+    `HTTP/1.1 200 OK\r\n` +
+    `X-Content-Type-Options: nosniff\r\n` +
+    `X-Frame-Options: DENY\r\n` +
+    `Referrer-Policy: no-referrer\r\n` +
+    `Content-Security-Policy: default-src 'self'\r\n` +
+    `Content-Type: text/html; charset=utf-8\r\n` +
+    `Content-Length: ${Buffer.byteLength(body)}\r\n\r\n` +
+    body;
+  socket.write(response);
+  socket.end();
+  return;
+  }
+
+  if (method === 'GET' && path === '/slow') {
+    setTimeout(() => {
+      const body = 'done';
+    const response =
+      `HTTP/1.1 200 OK\r\n` +
+      `Content-Type: text/plain; charset=utf-8\r\n` +
+      `Content-Length: ${Buffer.byteLength(body)}\r\n\r\n` +
+      body;
+    socket.write(response);
+    socket.end();
+  }, 2000 + Math.floor(Math.random() * 3000)); // 2–5 seconds
+  return;
+}
+
   if (method === 'GET' && path === '/index.html') {
     serveStatic('/index.html', socket, headers);
     return;
